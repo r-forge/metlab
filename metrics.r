@@ -1,3 +1,4 @@
+# Testing SVN
 metrics <- function(path_pkg)
 {
   library(tools)
