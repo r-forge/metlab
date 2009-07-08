@@ -1,8 +1,6 @@
 metrics <- function(path_pkg)
 {
   library(tools)
-  path_pkg = "..\\seqinr_2.0-3"
-  path_pkg = "..\\archetypes"
   file_sep <- base:::.Platform$file.sep
 
   data_list <- evaluate_data_files(path_pkg,file_sep)
@@ -171,6 +169,13 @@ eval_each_rd <- function(path_file)
     characters <- c(characters,y)
   }
 
+  rdfile <- readLines(path_file, n=-1)
+  total <- length(rdfile)
+
+  section <- c(section,"Total")
+  lines <- c(lines,sum(lines))
+  characters <- c(characters,sum(characters))
+
   df <- data.frame(section,lines,characters)
   
   return(list(df))
@@ -267,7 +272,6 @@ eval_each_rfile <- function(path_file)
     }
   }
 
-
   # counting things outside components (e.g. comments)
   rfile <- readLines(path_file, n=-1)
   comments_outside <- 0
@@ -284,8 +288,7 @@ eval_each_rfile <- function(path_file)
     }
   }
 
-
-  components <- c(components,"Total(including lines outside the functions):")
+  components <- c(components,"Total(including extras):")
   lines_vec <- c(lines_vec,length(rfile))
   blank_vec <- c(blank_vec,blanks_outside+sum(blank_vec))
   inter_comments_vec <- c(inter_comments_vec,comments_outside)
@@ -295,4 +298,30 @@ eval_each_rfile <- function(path_file)
   return(data.frame("component"=components,"lines"=lines_vec,"blank lines"=blank_vec,
                     "inter"=inter_comments_vec,"intra"=intra_comments_vec,"characters"=characters_vec))
 
+}
+
+# TBD
+halstead <- function(path_file)
+{
+  #path_file = "..\\archetypes\\R\\pcplot.R"
+  path_file = "lixo.R"
+  content <- parse(path_file,n=-1)
+  print_all(content)
+}
+
+# TBD
+print_all <- function(x)
+{
+  if( is.symbol(x) || is.character(x) || is.numeric(x) )
+  {
+    cat(as.character(x),"\n")
+  }
+  else
+  {
+    tmp <- as.list(x)
+    for(i in 1:length(tmp))
+    {
+      print_all(tmp[[i]])
+    }
+  }
 }
