@@ -1,50 +1,87 @@
-get_nauthors <- function(metric_file)
-{
-  return(metric_file$authors)
+get_nauthors <- function(metric, ...) {
+  UseMethod("get_nauthors")
 }
 
-get_data <- function(metric_file)
+get_nauthors.metrics <- function(metric, ...)
 {
-  return(metric_file$data)
+  return(metric$authors)
 }
 
-get_pdf <- function(metric_file)
+get_data <- function(metric, ...)
 {
-  return(metric_file$pdf)
+  UseMethod("get_data")
 }
 
-get_rnw <- function(metric_file)
+get_data.metrics <- function(metric, ...)
 {
-  return(metric_file$rnw)
+  return(metric$data)
 }
 
-get_extensions <- function(metric_file)
+get_pdf <- function(metric, ...)
 {
-  return(metric_file$ext)
+  UseMethod("get_pdf")
 }
 
-get_rdfiles <- function(metric_file,filename,section,what="lines")
+
+get_pdf.metrics <- function(metric, ...)
 {
-  if (what == "lines")
-    x <- 2
-  else if (what == "characters")
-    x <- 3
+  return(metric$pdf)
+}
+
+get_rnw <- function(metric, ...)
+{
+  UseMethod("get_rnw")
+}
+
+get_rnw.metrics <- function(metric, ...)
+{
+  return(metric$rnw)
+}
+
+get_extensions <- function(metric, ...)
+{
+  UseMethod("get_extensions")
+}
+
+get_extensions.metrics <- function(metric, ...)
+{
+  return(metric$ext)
+}
+
+get_rdfiles <- function(metric,filename,section,what, ...)
+{
+  UseMethod("get_rdfiles")
+}
+
+get_rdfiles.metrics <- function(metric,filename,section,what, ...)
+{
+  if(missing(metric))
+  {
+    stop("Argument \"metric\" cannot be empty")
+  }
+
+  if(missing(what))
+  {
+    stop("Argument \"what\" cannot be empty")
+  }
   else
   {
-    x <- 2
-    warning("Does not exist this metric. Showing number of lines")
+    if (what != "lines" && what !="characters" && what !="all")
+    {
+      stop("This metric does not exist")
+    }
   }
-  
+
   if (!missing(filename))
   {
-    tmp <- filename == metric_file$rdnames
+    tmp <- filename == metric$rdnames
     if (any(tmp))
     {
       index <- which(tmp)
 
       if (!missing(section))
       {
-         tmps <- section == metric_file$rdfiles[[index]][1]
+         tmps <- section == metric$rdfiles[[index]][1]
          if (any(tmps))
          {
           s <- which(tmps)
@@ -55,7 +92,7 @@ get_rdfiles <- function(metric_file,filename,section,what="lines")
          }
       }
       
-      return(sum(metric_file$rdfiles[[index]][s,x]))
+      return(sum(metric$rdfiles[[index]][s,what]))
     }
     else
     {
@@ -65,25 +102,25 @@ get_rdfiles <- function(metric_file,filename,section,what="lines")
 
   y <- 0
   s <- 0
-  
+
   if (!missing(section))
   {
-    for(i in 1:length(metric_file$rdfiles))
+    for(i in 1:length(metric$rdfiles))
     {
-      tmps <- section == metric_file$rdfiles[[i]][1]
+      tmps <- section == metric$rdfiles[[i]][1]
       if (any(tmps))
       {
         s <- which(tmps)
-        y <- y + metric_file$rdfiles[[i]][s,x]
+        y <- y + metric$rdfiles[[i]][s,what]
       }
     }
   }
   else
   {
-    for(i in 1:length(metric_file$rdfiles))
+    for(i in 1:length(metric$rdfiles))
     {
-      size <- length(metric_file$rdfiles[[i]][,1])
-      y <- y + metric_file$rdfiles[[i]][size,x]
+      size <- length(metric$rdfiles[[i]][,1])
+      y <- y + metric$rdfiles[[i]][size,what]
     }
   }
 
@@ -92,34 +129,43 @@ get_rdfiles <- function(metric_file,filename,section,what="lines")
 
 # filename can be the name of a .R file
 # or it can be the name of one function
-get_r_metric <- function(metric_file,filename,what="lines")
+get_r_metric <- function(metric,filename,what, ...)
 {
-  if (what == "lines")
-    x <- 2
-  else if (what == "blank")
-    x <- 3
-  else if (what == "intercomment")
-    x <- 4
-  else if (what == "intrarcomment")
-    x <- 5
-  else if (what == "characters")
-    x <- 6
+  UseMethod("get_r_metric")
+}
+
+get_r_metric.metrics <- function(metric,filename,what, ...)
+{
+  if(missing(metric))
+  {
+    stop("Argument \"metric\" cannot be empty")
+  }
+
+  if(missing(what))
+  {
+    stop("Argument \"what\" cannot be empty")
+  }
   else
   {
-    x <- 2
-    warning("Does not exist this metric. Showing number of lines")
+    if (what != "lines" || what !="characters" || what !="all")
+    {
+      stop("This metric does not exist")
+    }
   }
 
   if (!missing(filename))
   {
+    if (what != "lines" && what != "blank" && what != "intercomment" && what != "intracomment" && what !="characters" && what !="all")
+      stop("This metric does not exist")
+
     if( regexpr("[.]R$",filename,extended=F)[1] != -1 )
     {
-      tmp <- filename == metric_file$rnames
+      tmp <- filename == metric$rnames
       if (any(tmp))
       {
         index <- which(tmp)
-        last <- length(metric_file$rfiles[[index]][,x])
-        return(metric_file$rfiles[[index]][last,x])
+        last <- length(metric$rfiles[[index]][,what])
+        return(metric$rfiles[[index]][last,what])
       }
       else
       {
@@ -128,15 +174,15 @@ get_r_metric <- function(metric_file,filename,what="lines")
     }
     else
     {
-      for(i in 1:length(metric_file$rfiles))
+      for(i in 1:length(metric$rfiles))
       {
-        for(j in 1:length(metric_file$rfiles[[i]][,1]))
+        for(j in 1:length(metric$rfiles[[i]][,1]))
         {
-          tmp <- filename == as.character(metric_file$rfiles[[i]][,1])
+          tmp <- filename == as.character(metric$rfiles[[i]][,1])
           if (any(tmp))
           {
             index <- which(tmp)
-            return(metric_file$rfiles[[i]][index,x])
+            return(metric$rfiles[[i]][index,what])
           }
         }
       }
@@ -145,10 +191,10 @@ get_r_metric <- function(metric_file,filename,what="lines")
   }
 
   output <- 0
-  for (i in 1:length(metric_file$rfiles))
+  for (i in 1:length(metric$rfiles))
   {
-    last <- length(metric_file$rfiles[[i]][,x])
-    output <- output + metric_file$rfiles[[i]][last,x]
+    last <- length(metric$rfiles[[i]][,what])
+    output <- output + metric$rfiles[[i]][last,what]
   }
 
   return(output)

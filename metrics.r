@@ -172,7 +172,7 @@ eval_each_rd <- function(path_file)
   rdfile <- readLines(path_file, n=-1)
   total <- length(rdfile)
 
-  section <- c(section,"Total")
+  section <- c(section,"all")
   lines <- c(lines,sum(lines))
   characters <- c(characters,sum(characters))
 
@@ -288,7 +288,7 @@ eval_each_rfile <- function(path_file)
     }
   }
 
-  components <- c(components,"Total(including extras):")
+  components <- c(components,"all:")
   lines_vec <- c(lines_vec,length(rfile))
   blank_vec <- c(blank_vec,blanks_outside+sum(blank_vec))
   inter_comments_vec <- c(inter_comments_vec,comments_outside)
