@@ -69,8 +69,7 @@ evaluate_rfiles <- function(path_pkg,file_sep)
 
 eval_each_rfile <- function(path_file)
 {
-  notlist <- parse(path_file,n=-1)
-  content <- as.list(notlist)
+  content <- parse(path_file,n=-1)
 
   inter_comments_vec <- NULL
   intra_comments_vec <- NULL
@@ -83,29 +82,14 @@ eval_each_rfile <- function(path_file)
   # for each component
   for(i in 1:length(content))
   {
-    if ((is.symbol((content[[i]])[[1]])) && (as.character((content[[i]])[[1]])=="{"))
-    {
-      # It is {} (doxygen/roxygen)
-      inter_comments_vec <- c(inter_comments_vec,0)
-      intra_comments_vec <- c(intra_comments_vec,0)
-      blank_vec <- c(blank_vec,0)
-      characters_vec <- c(characters_vec,2)
-      lines_vec <- c(lines_vec,1)
-      components_vec <- c(components_vec,"Roxygen/doxygen")
-      component_type_vec <- c(component_type_vec,"{}")
-    }
-    else
-    {
-      out <- analyze_component(content[[i]],notlist[i])
-
-      inter_comments_vec <- c(inter_comments_vec,as.double(out[1]))
-      intra_comments_vec <- c(intra_comments_vec,as.double(out[2]))
-      blank_vec <- c(blank_vec,as.double(out[3]))
-      characters_vec <- c(characters_vec,as.double(out[4]))
-      lines_vec <- c(lines_vec,as.double(out[5]))
-      components_vec <- c(components_vec,out[6])
-      component_type_vec <- c(component_type_vec,out[7])
-     }
+    out <- analyze_component(content[i])
+    inter_comments_vec <- c(inter_comments_vec,as.double(out[1]))
+    intra_comments_vec <- c(intra_comments_vec,as.double(out[2]))
+    blank_vec <- c(blank_vec,as.double(out[3]))
+    characters_vec <- c(characters_vec,as.double(out[4]))
+    lines_vec <- c(lines_vec,as.double(out[5]))
+    components_vec <- c(components_vec,out[6])
+    component_type_vec <- c(component_type_vec,out[7])
  }
 
   # counting things outside components (e.g. comments and blank lines)
@@ -141,43 +125,48 @@ eval_each_rfile <- function(path_file)
 
 }
 
-analyze_component <- function(content,notlist)
+analyze_component <- function(content)
 {
   component_name <- 0
   component_type <- 0
 
-  if (!(regexpr("<-",as.character(content[1]),extended=F)[1] != -1) && (!(regexpr("=",as.character(content[1]),extended=F)[1] != -1)))
+  if (as.character((content[[1]])=="{"))
+  {
+      # It is {} (doxygen/roxygen)
+      component_name <- "Roxygen/doxygen"
+      component_type <- "{}"
+  }
+  else if (!(regexpr("<-",as.character(content[[1]]),extended=F)[1] != -1) && (!(regexpr("=",as.character(content[[1]]),extended=F)[1] != -1)))
   {
     # Function Calling
-    component_name <- as.character(content[1])
+    component_name <- as.character(content[[1]][1])
     component_type <- "function calling"
     
     # Check if there is SetMethod
     if (as.character(component_name) == "setMethod")
     {
-      component_name <- as.character(content[2])
+      component_name <- as.character(content[[1]][2])
       component_type <- "methodS4"
     }
     else if (as.character(component_name) == "setGeneric")
     {
-      component_name <- as.character(content[2])
+      component_name <- as.character(content[[1]][2])
       component_type <- "genericS4"
     }
     
   }
-  else if (regexpr("^function(",as.character(content[3]),extended=F)[1] != -1)
+  else if (regexpr("^function(",as.character(content[[1]][3]),extended=F)[1] != -1)
   {
     # Function declaration
-    component_name <- as.character(content[2])
+    component_name <- as.character(content[[1]][2])
     component_type <- "function"
 
     # Check if there is UseMethod inside
-    tst <- notlist[1]
-    if (is_genericS3(tst) == TRUE)
+    if (is_genericS3(content[[1]]) == TRUE)
     {
       component_type <- "genericS3"
     }
-    else if (is_methodS3(content) == TRUE)
+    else if (is_methodS3(component_name) == TRUE)
     {
       component_type <- "methodS3"
     }
@@ -190,13 +179,13 @@ analyze_component <- function(content,notlist)
     component_type <- "assignement"
   }
 
-  out <- counting_component(content,notlist,component_name,component_type)
+  out <- counting_component(content,component_name,component_type)
 
   output <- c(out[1],out[2],out[3],out[4],out[5],out[6],out[7])
   return(output)
 }
 
-counting_component <- function(content,notlist,component_name,component_type)
+counting_component <- function(content,component_name,component_type)
 {
   inter_comments <- 0
   intra_comments <- 0
@@ -204,11 +193,6 @@ counting_component <- function(content,notlist,component_name,component_type)
   characters <- 0
 
   textfile <- deparse(content,control = "all", width.cutoff=500,nlines=-1)
-
-  if (component_type == "function calling" || component_type == "methodS4" || component_type == "genericS4")
-  {
-    textfile <- deparse(notlist,control = "all", width.cutoff=500,nlines=-1)
-  }
 
   # for each line (of this component)
   for (j in 1:length(textfile))
@@ -251,22 +235,15 @@ counting_component <- function(content,notlist,component_name,component_type)
    }
   }
 
-
-  if (component_type == "function")
-    length(textfile) <- length(textfile)-1
-
-  if (component_type == "function calling"  || component_type == "methodS4" || component_type == "genericS4")
-  {
-    characters <- characters - 12 # 12 is nchar("expression()")
-  }
+  characters <- characters - nchar("expression()")
 
   output <- c(inter_comments,intra_comments,blank,characters,length(textfile),component_name,component_type)
   return(output)
 }
 
-is_genericS3 <- function(notlist)
+is_genericS3 <- function(content)
 {
-  text <- deparse(notlist)
+  text <- deparse(content)
   isgenericS3 <- FALSE
   
   for(i in 1:length(text))
@@ -295,15 +272,8 @@ is_genericS3 <- function(notlist)
   return(isgenericS3)
 }
 
-is_methodS3 <- function(notlist)
+is_methodS3 <- function(name)
 {
-  name <- as.character(notlist[2])
-  if (regexpr("[.]", name)[1] != -1)
-  {
-    return(TRUE)
-  }
-  else
-  {
-    return(FALSE)
-  }
+  if (regexpr("[.]", name)[1] != -1) {return(TRUE)}
+  else {return(FALSE)}
 }
