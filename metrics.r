@@ -10,10 +10,10 @@ metrics <- function(path_pkg)
   number_authors <- evaluate_description(path_pkg,file_sep)
   rd_files_list <- evaluate_rd_files(path_pkg,file_sep)
   r_files_list <- evaluate_rfiles(path_pkg,file_sep)
-  
+
   rdnames <-list.files(paste(path_pkg,file_sep,"man",sep=""),pattern="[.]Rd$")
   rnames <- list.files(paste(path_pkg,file_sep,"R",file_sep,sep=""),pattern="[.]R$")
-  
+
   output <- list( "data"=data_list,
                   "pdf"=pdf_list,
                   "rnw"=rnw_list,
@@ -35,150 +35,22 @@ print.metrics <- function(x)
   cat("Number of pdf files:",length(x$pdf),"\n",x$pdf,"\n\n")
   cat("Number of Rnw files:",length(x$rnw),"\n",x$rnw,"\n\n")
   cat("Number of data files:",length(x$data),"\n",x$data,"\n\n")
-  cat("Number of different extensions in the source files:",length(x$src),"\n",x$src,"\n")
-  
+  cat("Number of different extensions in the source files:",length(x$ext),"\n",x$ext,"\n")
+
   cat("\n","Analysis of each .Rd file:")
   for(i in 1:length(x$rdnames))
   {
     cat("\n", x$rdnames[i],"\n")
     print(x$rdfiles[[i]])
   }
-  
+
   cat("\n\n","Analysis of each .R file:")
   for(i in 1:length(x$rnames))
   {
     cat("\n", x$rnames[i],"\n")
     print(x$rfiles[[i]])
   }
-  
-}
 
-evaluate_description <- function(path_pkg,file_sep)
-{
-  desc_file <- readLines(paste(path_pkg,file_sep,"DESCRIPTION",sep=""), n=-1)
-  for(i in 1:length(desc_file))
-  {
-    if( regexpr("^[:blank:]\\{0,\\}Author:",desc_file[i],extended=F)[1] != -1 )
-    {
-      authors <- NULL
-      
-      # Concatenating all lines that contains information about authors
-      while (regexpr("^[[:blank:]]\\{0,\\}Maintainer:", desc_file[i] ,extended=F)[1] == -1)
-       {
-         authors <- paste(authors,desc_file[i])
-         i <- i + 1
-       }
-       
-       at_counter <- 0
-       
-       # Counts how many @ finds in the concateneted line
-       while (regexpr("@", authors ,extended=F)[1] != -1)
-       {
-         authors <- sub("@","X",authors,extended=F)
-         at_counter <- at_counter + 1
-       }
-
-       return(at_counter)
-    }
-  }
-}
-
-evaluate_ext_files <- function(path_pkg,file_sep)
-{
-  directory_info <- file.info(paste(path_pkg,file_sep,"src",sep=""))
-  if (is.na(directory_info$isdir)==F)
-  {
-    extension_list <- "R"
-    blacklist <- c("win","h","hpp")
-  
-    src_files <- list.files(paste(path_pkg,file_sep,"src",file_sep,sep=""))
-    for(i in 1:length(src_files))
-    {
-      tmp <- src_files[i]
-      pieces <- strsplit(tmp,"[.]",extended=F)[[1]]
-      if (length(pieces)<=1)
-      {
-        extension <- "R"
-      }
-      else
-      {
-        extension <- pieces[length(pieces)]
-      }
-
-      # Check if this extension is already in the extension_list or blacklist
-      contains <- any( extension == c(extension_list[],blacklist[])  )
-
-      if (contains == F)
-      {
-        extension_list <- c(extension_list,extension)
-      }
-    }
-    return(extension_list[-1])
-  }
-  return(NULL)
-}
-
-evaluate_rnw_files <- function(path_pkg,file_sep)
-{
-  rnw_files <- list.files(paste(path_pkg,file_sep,"inst",file_sep,"doc",file_sep,sep=""))
-  tmp <- sapply(rnw_files,regexpr,pattern="[.]Rnw$",extended=F )
-  return(names(tmp[tmp!=-1]))
-}
-
-evaluate_pdf_files <- function(path_pkg,file_sep)
-{
-  pdf_files <- list.files(paste(path_pkg,file_sep,"inst",file_sep,"doc",file_sep,sep=""))
-  tmp <- sapply(pdf_files,regexpr,pattern="[.]pdf$",extended=F )
-  return(names(tmp[tmp!=-1]))
-}
-
-evaluate_data_files <- function(path_pkg,file_sep)
-{
-  data <- list.files(paste(path_pkg,file_sep,"data",sep=""))
-  return(unlist(data))
-}
-
-evaluate_rd_files <- function(path_pkg,file_sep)
-{
-  rdfiles <- list.files(paste(path_pkg,file_sep,"man",sep=""),pattern="[.]Rd$")
-  rdinfo <- vector("list",length(rdfiles))
-
-  for(i in 1:length(rdfiles))
-  {
-    rdinfo[i] <- eval_each_rd(paste(path_pkg,file_sep,"man",file_sep,rdfiles[i],sep=""))
-  }
-
-  return(rdinfo)
-}
-
-eval_each_rd <- function(path_file)
-{
-  tmp <- Rd_parse(path_file)
-  
-  section <- as.vector(unlist(tmp$data[[2]]))
-  content <- as.vector(unlist(tmp$data[[1]]))
-
-  lines <- NULL
-  characters <- NULL
-  
-  for(i in 1:length(content))
-  {
-    x <- strsplit(content[i],"\n",extended=F)
-    lines <- c(lines,length(x[[1]]))
-    y <- nchar(content[i])
-    characters <- c(characters,y)
-  }
-
-  rdfile <- readLines(path_file, n=-1)
-  total <- length(rdfile)
-
-  section <- c(section,"all")
-  lines <- c(lines,sum(lines))
-  characters <- c(characters,sum(characters))
-
-  df <- data.frame(section,lines,characters)
-  
-  return(list(df))
 }
 
 evaluate_rfiles <- function(path_pkg,file_sep)
@@ -197,131 +69,242 @@ evaluate_rfiles <- function(path_pkg,file_sep)
 
 eval_each_rfile <- function(path_file)
 {
-  content <- as.list(parse(path_file),n=-1)
+  notlist <- parse(path_file,n=-1)
+  content <- as.list(notlist)
 
   inter_comments_vec <- NULL
   intra_comments_vec <- NULL
   lines_vec <- NULL
   blank_vec <- NULL
   characters_vec <- NULL
-  components <- NULL
+  components_vec <- NULL
+  component_type_vec <- NULL
 
   # for each component
   for(i in 1:length(content))
   {
-    r_name <- content[i]
-    component_name <- as.character(r_name[[1]][2])
-
-    inter_comments <- 0
-    intra_comments <- 0
-    blank <- 0
-    characters <- 0
-
-    if (component_name != "NULL")
+    tst <- content[[i]]
+    if ((is.symbol(tst[[1]])) && (as.character(tst[[1]])=="{"))
     {
-      textfile <- deparse(content[[i]],control = "all", width.cutoff=500,nlines=-1)
-    
-      # for each line (of this component)
-      for (j in 1:length(textfile))
-      {
-        line_of_code <- textfile[j]
-
-        # count number of characters (excluding blank characters)
-        line_tmp <- gsub("[[:blank:]]","",line_of_code,extended=F)
-        characters <- characters + nchar(line_tmp)
-
-        # count blank lines
-        if(regexpr("^[[:blank:]]\\{0,\\}$",line_of_code,extended="F")[1] != -1)
-        {
-         blank <- blank+1
-        }
-
-        # substitute every symbol ' by a "
-        line_of_code <- gsub("\'","\"",line_of_code,extended=F)
-
-        # substitute every symbol \" by X since a \" will be always inside quotes in a correct expression
-        line_of_code <- gsub("[\\][\"]","X",line_of_code,extended=F)
-
-        # If there is a symbol # in the beggining (ignoring blank characters)
-        if( regexpr("^[[:blank:]]\\{0,\\}[#]",line_of_code,extended=F)[1] != -1 )
-        {
-          inter_comments <- inter_comments+1
-        }
-        # If not, then substitute every string (i.e "anything") by X
-        else
-        {
-          while (regexpr("\"", line_of_code ,extended=F)[1] != -1)
-          {
-            line_of_code <- sub("[\"][^\"]\\{0,\\}[\"]","X",line_of_code,extended=F)
-          }
-
-          # If still there is a # symbol, then it has a comment after some code
-          if (regexpr("#", line_of_code ,extended=F)[1] != -1)
-          {
-            intra_comments <- intra_comments+1
-          }
-        }
-      }
-
-    inter_comments_vec <- c(inter_comments_vec,inter_comments)
-    intra_comments_vec <- c(intra_comments_vec,intra_comments)
-    lines_vec <- c(lines_vec,length(textfile)-1)
-    blank_vec <- c(blank_vec,blank)
-    characters_vec <- c(characters_vec,characters)
-    components <- c(components,component_name)
+      # It is {} (doxygen/roxygen)
+      inter_comments_vec <- c(inter_comments_vec,0)
+      intra_comments_vec <- c(intra_comments_vec,0)
+      blank_vec <- c(blank_vec,0)
+      characters_vec <- c(characters_vec,2)
+      lines_vec <- c(lines_vec,1)
+      components_vec <- c(components_vec,"Roxygen/doxygen")
+      component_type_vec <- c(component_type_vec,"{}")
     }
-  }
+    else
+    {
+      out <- analyze_component(content[[i]],notlist[i])
 
-  # counting things outside components (e.g. comments)
+      inter_comments_vec <- c(inter_comments_vec,as.double(out[1]))
+      intra_comments_vec <- c(intra_comments_vec,as.double(out[2]))
+      blank_vec <- c(blank_vec,as.double(out[3]))
+      characters_vec <- c(characters_vec,as.double(out[4]))
+      lines_vec <- c(lines_vec,as.double(out[5]))
+      components_vec <- c(components_vec,out[6])
+      component_type_vec <- c(component_type_vec,out[7])
+     }
+ }
+
+  # counting things outside components (e.g. comments and blank lines)
   rfile <- readLines(path_file, n=-1)
-  comments_outside <- 0
-  blanks_outside <- 0
-  characters_outside <- 0
+  comments_total <- 0
+  blanks_total <- 0
+  characters_total <- 0
   for(i in 1:length(rfile))
   {
     # if there is a symbol # in the beggining (ignoring blank characters)
     if( regexpr("^[[:blank:]]\\{0,\\}[#]",rfile[i],extended=F)[1] != -1 )
     {
-      comments_outside <- comments_outside + 1
-      blanks_outside <- blanks_outside + 1
-      characters_outside <- characters_outside + nchar(rfile[i])
+      comments_total <- comments_total + 1
     }
+    if((regexpr("^[[:blank:]]\\{1,\\}$",rfile[i],extended="F")[1] != -1)||(rfile[i]==""))
+    {
+      blanks_total <- blanks_total + 1
+    }
+
+    characters_total <- characters_total + nchar(rfile[i])
   }
 
-  components <- c(components,"all:")
+  components_vec <- c(components_vec,"all:")
+  component_type_vec <- c(component_type_vec,"")
   lines_vec <- c(lines_vec,length(rfile))
-  blank_vec <- c(blank_vec,blanks_outside+sum(blank_vec))
-  inter_comments_vec <- c(inter_comments_vec,comments_outside)
+  blank_vec <- c(blank_vec,blanks_total)
+  inter_comments_vec <- c(inter_comments_vec,comments_total)
   intra_comments_vec <- c(intra_comments_vec,sum(intra_comments_vec))
-  characters_vec <- c(characters_vec,characters_outside+sum(characters_vec))
+  characters_vec <- c(characters_vec,characters_total)
 
-  return(data.frame("component"=components,"lines"=lines_vec,"blank lines"=blank_vec,
-                    "inter"=inter_comments_vec,"intra"=intra_comments_vec,"characters"=characters_vec))
+  return(data.frame("component"=components_vec,"lines"=lines_vec,"blank lines"=blank_vec,
+                    "inter"=inter_comments_vec,"intra"=intra_comments_vec,"characters"=characters_vec,"type"=component_type_vec))
 
 }
 
-# TBD
-halstead <- function(path_file)
+analyze_component <- function(content,notlist)
 {
-  #path_file = "..\\archetypes\\R\\pcplot.R"
-  path_file = "lixo.R"
-  content <- parse(path_file,n=-1)
-  print_all(content)
-}
+  component_name <- 0
+  component_type <- 0
 
-# TBD
-print_all <- function(x)
-{
-  if( is.symbol(x) || is.character(x) || is.numeric(x) )
+  if (!(regexpr("<-",as.character(content[1]),extended=F)[1] != -1) && (!(regexpr("=",as.character(content[1]),extended=F)[1] != -1)))
   {
-    cat(as.character(x),"\n")
+    # Function Calling
+    component_name <- as.character(content[1])
+    component_type <- "function calling"
+    
+    # Check if there is SetMethod
+    if (as.character(component_name) == "setMethod")
+    {
+      component_name <- as.character(content[2])
+      component_type <- "methodS4"
+    }
+    else if (as.character(component_name) == "setGeneric")
+    {
+      component_name <- as.character(content[2])
+      component_type <- "genericS4"
+    }
+    
+  }
+  else if (regexpr("^function(",as.character(content[3]),extended=F)[1] != -1)
+  {
+    # Function declaration
+    component_name <- as.character(content[2])
+    component_type <- "function"
+
+    # Check if there is UseMethod inside
+    tst <- notlist[1]
+    if (is_genericS3(tst) == TRUE)
+    {
+      component_type <- "genericS3"
+    }
+    else if (is_methodS3(content) == TRUE)
+    {
+      component_type <- "methodS3"
+    }
+
   }
   else
   {
-    tmp <- as.list(x)
-    for(i in 1:length(tmp))
+    # Assignemnt
+    component_name <- "<-"
+    component_type <- "assignement"
+  }
+
+  out <- counting_component(content,notlist,component_name,component_type)
+
+  output <- c(out[1],out[2],out[3],out[4],out[5],out[6],out[7])
+  return(output)
+}
+
+counting_component <- function(content,notlist,component_name,component_type)
+{
+  inter_comments <- 0
+  intra_comments <- 0
+  blank <- 0
+  characters <- 0
+
+  textfile <- deparse(content,control = "all", width.cutoff=500,nlines=-1)
+
+  if (component_type == "function calling" || component_type == "methodS4" || component_type == "genericS4")
+  {
+    textfile <- deparse(notlist,control = "all", width.cutoff=500,nlines=-1)
+  }
+
+  # for each line (of this component)
+  for (j in 1:length(textfile))
+  {
+   line_of_code <- textfile[j]
+
+   # count blank lines
+   if((regexpr("^[[:blank:]]\\{1,\\}$",line_of_code,extended="F")[1] != -1)||line_of_code=="")
+   {
+     blank <- blank+1
+   }
+   # count number of characters (excluding blank characters)
+   line_tmp <- gsub("[[:blank:]]","",line_of_code,extended=F)
+   characters <- characters + nchar(line_tmp)
+
+   # substitute every symbol ' by a "
+   line_of_code <- gsub("\'","\"",line_of_code,extended=F)
+
+   # substitute every symbol \" by X since a \" will be always inside quotes in a correct expression
+   line_of_code <- gsub("[\\][\"]","X",line_of_code,extended=F)
+
+   # If there is a symbol # in the beggining (ignoring blank characters)
+   if( regexpr("^[[:blank:]]\\{0,\\}[#]",line_of_code,extended=F)[1] != -1 )
+   {
+     inter_comments <- inter_comments+1
+   }
+   # If not, then substitute every string (i.e "anything") by X
+   else
+   {
+     while (regexpr("\"", line_of_code ,extended=F)[1] != -1)
+     {
+       line_of_code <- sub("[\"][^\"]\\{0,\\}[\"]","X",line_of_code,extended=F)
+     }
+
+     # If still there is a # symbol, then it has a comment after some code
+     if (regexpr("#", line_of_code ,extended=F)[1] != -1)
+     {
+       intra_comments <- intra_comments+1
+     }
+   }
+  }
+
+
+  if (component_type == "function")
+    length(textfile) <- length(textfile)-1
+
+  if (component_type == "function calling"  || component_type == "methodS4" || component_type == "genericS4")
+  {
+    characters <- characters - 12 # 12 is nchar("expression()")
+  }
+
+  output <- c(inter_comments,intra_comments,blank,characters,length(textfile),component_name,component_type)
+  return(output)
+}
+
+is_genericS3 <- function(notlist)
+{
+  text <- deparse(notlist)
+  isgenericS3 <- FALSE
+  
+  for(i in 1:length(text))
+  {
+    line_of_code <- text[i]
+
+    # substitute every symbol ' by a "
+    line_of_code <- gsub("\'","\"",line_of_code,extended=F)
+
+    # substitute every symbol \" by X since a \" will be always inside quotes in a correct expression
+    line_of_code <- gsub("[\\][\"]","X",line_of_code,extended=F)
+
+    # substitute every string (i.e "anything") by X
+    while (regexpr("\"", line_of_code ,extended=F)[1] != -1)
     {
-      print_all(tmp[[i]])
+      line_of_code <- sub("[\"][^\"]\\{0,\\}[\"]","X",line_of_code,extended=F)
     }
+
+    if (regexpr("UseMethod(", line_of_code ,extended=F)[1] != -1)
+    {
+      isgenericS3 <- TRUE
+      break
+    }
+  }
+
+  return(isgenericS3)
+}
+
+is_methodS3 <- function(notlist)
+{
+  name <- as.character(notlist[2])
+  if (regexpr("[.]", name)[1] != -1)
+  {
+    return(TRUE)
+  }
+  else
+  {
+    return(FALSE)
   }
 }
