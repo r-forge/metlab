@@ -134,7 +134,7 @@ get_r_metric <- function(metric,filename,what, ...)
   UseMethod("get_r_metric")
 }
 
-get_r_metric.metrics <- function(metric,filename,what, ...)
+get_r_metric.metrics <- function(metric,filename,component,what, ...)
 {
   if(missing(metric))
   {
@@ -145,19 +145,15 @@ get_r_metric.metrics <- function(metric,filename,what, ...)
   {
     stop("Argument \"what\" cannot be empty")
   }
-  else
+
+  if (what != "lines" && what != "blank" && what != "intercomment" && what != "intracomment" &&
+      what !="characters" && what !="all")
   {
-    if (what != "lines" || what !="characters" || what !="all")
-    {
-      stop("This metric does not exist")
-    }
+    stop("This metric does not exist")
   }
 
   if (!missing(filename))
   {
-    if (what != "lines" && what != "blank" && what != "intercomment" && what != "intracomment" && what !="characters" && what !="all")
-      stop("This metric does not exist")
-
     if( regexpr("[.]R$",filename,extended=F)[1] != -1 )
     {
       tmp <- filename == metric$rnames
@@ -165,29 +161,28 @@ get_r_metric.metrics <- function(metric,filename,what, ...)
       {
         index <- which(tmp)
         last <- length(metric$rfiles[[index]][,what])
-        return(metric$rfiles[[index]][last,what])
-      }
-      else
-      {
-        warning("This .R file does not exist. Showing the sum of all .R files")
-      }
-    }
-    else
-    {
-      for(i in 1:length(metric$rfiles))
-      {
-        for(j in 1:length(metric$rfiles[[i]][,1]))
-        {
-          tmp <- filename == as.character(metric$rfiles[[i]][,1])
-          if (any(tmp))
+
+          if (!missing(component))
           {
-            index <- which(tmp)
-            return(metric$rfiles[[i]][index,what])
+
+            x <- component == metric$rfiles[[index]][,"component"]
+            if (any(x))
+            {
+              comp_name <- which(x)
+              return(metric$rfiles[[index]][comp_name,what])
+            }
+            else
+            {
+              warning("This component does not exist. Showing metric for all components of this .R file")
+              return(metric$rfiles[[index]][last,what])
+            }
+
           }
-        }
+          else return(metric$rfiles[[index]][last,what])
       }
-      warning("This component does not exist. Showing the sum of all .R files")
+      else warning("This .R file does not exist. Showing the sum of all .R files")
     }
+    else warning("This .R file does not exist. Showing the sum of all .R files")
   }
 
   output <- 0
@@ -198,4 +193,27 @@ get_r_metric.metrics <- function(metric,filename,what, ...)
   }
 
   return(output)
+}
+
+get_type <- function(metric,filename,component_name)
+{
+  if (missing(metric)) stop("Missing argument metric.")
+  if (missing(filename)) stop("Missing argument filename.")
+  if (missing(component_name)) stop("Missing argument compoenent_name.")
+  
+  if( regexpr("[.]R$",filename,extended=F)[1] != -1 )
+  {
+      tmp <- filename == metric$rnames
+      if (any(tmp))
+      {
+        index <- which(tmp)
+        components <- metric$rfiles[[index]][,"component"]
+        out <- component_name == as.character(components)
+        if (is.numeric(length(out)))
+        {
+          return(as.character((metric$rfiles[[index]][out,"type"])))
+        }
+      }
+  }
+  stop("This component does not exist")
 }

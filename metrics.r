@@ -83,8 +83,7 @@ eval_each_rfile <- function(path_file)
   # for each component
   for(i in 1:length(content))
   {
-    tst <- content[[i]]
-    if ((is.symbol(tst[[1]])) && (as.character(tst[[1]])=="{"))
+    if ((is.symbol((content[[i]])[[1]])) && (as.character((content[[i]])[[1]])=="{"))
     {
       # It is {} (doxygen/roxygen)
       inter_comments_vec <- c(inter_comments_vec,0)
