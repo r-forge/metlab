@@ -1,0 +1,60 @@
+
+= Program Idea, Design and Implementation =
+
+Calculate metrics from R code, and provide interfaces to use other
+software metric tools (especially for C/C++/Fortran, etc. code).
+
+
+
+
+= Metrics =
+
+== General source code metrics: ==
+
+(1) Lines of code, number of statements, lines of comments
+(2) Number of R source files, distribution of (1)
+(3) Number of "external" src files, number of different languages
+(4) Number of functions
+(5) Number of generics, methods, (abstract) classes (S3/S4)
+
+
+== Documentation metrics: ==
+
+(7) Number of data sets, examples, vignettes, demos
+(8) Number of Rd files
+(9) Number of lines/characters in different Rd sections (usage, description, etc.)
+
+
+== Package metrics: ==
+
+(11) Number of package dependences 
+(12) Number of reverse dependences (in a repository)
+(13) Number of authors
+(14) Package Check Results (see http://cran.at.r-project.org/web/checks/check_summary.html)
+
+
+== Metrics to calculate Halstead complexity: ==
+
+(16) Number of distinct operators and operands, total number of
+     operators and operands
+	 http://en.wikipedia.org/wiki/Halstead_complexity_measures
+
+
+== Metrics to calculate Cyclomatic complexity: ==
+
+(17) control flow graph of the program
+	 http://en.wikipedia.org/wiki/Cyclomatic_complexity
+
+
+== Object oriented metrics (S4): ==
+
+(18) Coupling between Object Classes (COB)
+(19) Depth of Inheritance (DIT), Number of Children (NOC)
+
+
+= Packages which can help to analyze code, documentation, etc. =
+
+tools, codetools
+
+
+

@@ -1,0 +1,14 @@
+
+export(metrics)
+export(define.direct.metric)
+export(list.direct.metrics)
+export(derived.metric, derived)
+export(collection.derived.metric, cderived)
+
+export(available.pkg.versions,
+       crosssectional.study,
+       longitudinal.study,
+       reinit.destdir)
+
+S3method(print, metrics)
+S3method(print, metricscollection)
