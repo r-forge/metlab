@@ -1,7 +1,7 @@
 
 define.direct.metric <- function(name,
                                  definition=function(pkgpath) {},
-                                 fnname=name, envir=topenv()) {
+                                 fnname=name, envir=globalenv()) {
 
   attr(definition, 'name') <- name
   attr(definition, 'class') <- 'direct.metric'
@@ -11,7 +11,8 @@ define.direct.metric <- function(name,
 
 define.internal.direct.metric <- function(name, definition) {
   define.direct.metric(name, definition,
-                       internal.direct.metric.name(name))
+                       internal.direct.metric.name(name),
+					   topenv())
 }
 
 
@@ -48,11 +49,19 @@ function(pkgpath) {
 
 define.internal.direct.metric('dependencies',
 function(pkgpath) {
+  .dep <- function(which) {
+    if ( which %in% colnames(desc) )
+	  unname(length(strsplit(desc[,which], ',')[[1]]))
+	else
+	  0
+  }
+  
   desc <- read.dcf(file.path(pkgpath, 'DESCRIPTION'))
+  
 
-  c(depends=unname(length(strsplit(desc[,'Depends'], ',')[[1]])),
-    imports=unname(length(strsplit(desc[,'Imports'], ',')[[1]])),
-    suggests=unname(length(strsplit(desc[,'Suggests'], ',')[[1]])))
+  c(depends=.dep('Depends'),
+    imports=.dep('Imports'),
+    suggests=.dep('Suggests'))
 })
 
 
