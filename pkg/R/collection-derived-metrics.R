@@ -19,7 +19,7 @@ get.collection.derived.metric.function <- function(name) {
 }
 
 
-list.cderived.metrics <- function() {
+list.collection.derived.metrics <- function() {
   list.metrics('collection.derived')
 }
 

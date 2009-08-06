@@ -54,7 +54,7 @@ evaluate_rnw_files <- function(path_pkg,file_sep)
   if (is.na(directory_info$isdir)==F)
   {
     rnw_files <- list.files(way)
-    tmp <- sapply(rnw_files,regexpr,pattern="[.]Rnw$",extended=F )
+    tmp <- sapply(rnw_files,regexpr,pattern="[.]Rnw$",extended=F,ignore.case=TRUE)
     return(names(tmp[tmp!=-1]))
   }
   else return(NULL)
@@ -68,7 +68,7 @@ evaluate_pdf_files <- function(path_pkg,file_sep)
   if (is.na(directory_info$isdir)==F)
   {
     pdf_files <- list.files(way)
-    tmp <- sapply(pdf_files,regexpr,pattern="[.]pdf$",extended=F )
+    tmp <- sapply(pdf_files,regexpr,pattern="[.]pdf$",extended=F,ignore.case=TRUE)
     return(names(tmp[tmp!=-1]))
   }
   else return(NULL)
@@ -82,7 +82,8 @@ evaluate_data_files <- function(path_pkg,file_sep)
   if (is.na(directory_info$isdir)==F)
   {
     data <- list.files(way)
-    tmp <- sapply(data,regexpr,pattern="[.]RData$",extended=F )
+    tmp <- sapply(data,regexpr,pattern="[.]RData$",extended=F,
+                  ignore.case=TRUE)
     return(names(tmp[tmp!=-1]))
   }
   else return(NULL)
@@ -90,7 +91,8 @@ evaluate_data_files <- function(path_pkg,file_sep)
 
 evaluate_rd_files <- function(path_pkg,file_sep)
 {
-  rdfiles <- list.files(paste(path_pkg,file_sep,"man",sep=""),pattern="[.]Rd$")
+  rdfiles <- list.files(paste(path_pkg,file_sep,"man",sep=""),
+                        pattern="[.]Rd$", ignore.case=TRUE)
   rdinfo <- vector("list",length(rdfiles))
 
   for(i in 1:length(rdfiles))
@@ -135,7 +137,8 @@ eval_each_rd <- function(path_file, name)
 
 evaluate_rfiles <- function(path_pkg,file_sep)
 {
-  rfiles <- list.files(paste(path_pkg,file_sep,"R",file_sep,sep=""),pattern="[.]R$")
+  rfiles <- list.files(paste(path_pkg,file_sep,"R",file_sep,sep=""),
+                       pattern="[.]R$", ignore.case=TRUE)
   rinfo <- vector("list",length(rfiles))
 
   for(i in 1:length(rinfo))
@@ -149,7 +152,7 @@ evaluate_rfiles <- function(path_pkg,file_sep)
 
 eval_each_rfile <- function(path_file, name)
 {
-  content <- parse(path_file,n=-1)
+   content <- parse(path_file,n=-1)
 
   inter_comments_vec <- NULL
   intra_comments_vec <- NULL
@@ -177,7 +180,7 @@ eval_each_rfile <- function(path_file, name)
   comments_total <- 0
   blanks_total <- 0
   characters_total <- 0
-  for(i in 1:length(rfile))
+  for(i in seq(along=rfile))
   {
     # if there is a symbol # in the beggining (ignoring blank characters)
     if( regexpr("^[[:blank:]]\\{0,\\}[#]",rfile[i],extended=F)[1] != -1 )
@@ -188,7 +191,6 @@ eval_each_rfile <- function(path_file, name)
     {
       blanks_total <- blanks_total + 1
     }
-
     characters_total <- characters_total + nchar(rfile[i])
   }
 
@@ -215,59 +217,62 @@ analyze_component <- function(content)
   component_name <- 0
   component_type <- 0
 
-  if (as.character((content[[1]])=="{"))
-  {
+  if (length(content) > 0 ) {
+  if ( length(content[[1]]) > 0 ) {
+    if (as.character((content[[1]])=="{"))
+    {
       # It is {} (doxygen/roxygen)
       component_name <- "Roxygen/doxygen"
       component_type <- "{}"
-  }
-  else if (!(regexpr("<-",as.character(content[[1]]),extended=F)[1] != -1) && (!(regexpr("=",as.character(content[[1]]),extended=F)[1] != -1)))
-  {
-    # Function Calling
-    component_name <- as.character(content[[1]][1])
-    component_type <- "other"
-    
-    # Check if there is SetMethod
-    if (as.character(component_name) == "setMethod")
+    }
+    else if (!(regexpr("<-",as.character(content[[1]]),extended=F)[1] != -1) &&
+             (!(regexpr("=",as.character(content[[1]]),extended=F)[1] != -1)))
     {
+      # Function Calling
+      component_name <- as.character(content[[1]][1])
+      component_type <- "other"
+      
+      # Check if there is SetMethod
+      if (as.character(component_name) == "setMethod")
+      {
+        component_name <- as.character(content[[1]][2])
+        component_type <- "methodS4"
+      }
+      else if (as.character(component_name) == "setGeneric")
+      {
+        component_name <- as.character(content[[1]][2])
+        component_type <- "genericS4"
+      }
+      else if (as.character(component_name) == "setClass")
+      {
+        component_name <- as.character(content[[1]][2])
+        component_type <- "classS4"
+      }
+      
+    }
+    else if (regexpr("^function(",as.character(content[[1]][3]),extended=F)[1] != -1)
+    {
+      # Function declaration
       component_name <- as.character(content[[1]][2])
-      component_type <- "methodS4"
+      component_type <- "function"
+      
+      # Check if there is UseMethod inside
+      if (is_genericS3(content[[1]]) == TRUE)
+      {
+        component_type <- "genericS3"
+      }
+      else if (is_methodS3(component_name) == TRUE)
+      {
+        component_type <- "methodS3"
+      }
     }
-    else if (as.character(component_name) == "setGeneric")
+    else
     {
-      component_name <- as.character(content[[1]][2])
-      component_type <- "genericS4"
+      # Assignemnt
+      component_name <- "<-"
+      component_type <- "assignement"
     }
-    else if (as.character(component_name) == "setClass")
-    {
-      component_name <- as.character(content[[1]][2])
-      component_type <- "classS4"
-    }
-    
-  }
-  else if (regexpr("^function(",as.character(content[[1]][3]),extended=F)[1] != -1)
-  {
-    # Function declaration
-    component_name <- as.character(content[[1]][2])
-    component_type <- "function"
-
-    # Check if there is UseMethod inside
-    if (is_genericS3(content[[1]]) == TRUE)
-    {
-      component_type <- "genericS3"
-    }
-    else if (is_methodS3(component_name) == TRUE)
-    {
-      component_type <- "methodS3"
-    }
-
-  }
-  else
-  {
-    # Assignemnt
-    component_name <- "<-"
-    component_type <- "assignement"
-  }
+  }}
 
   out <- counting_component(content,component_name,component_type)
 

@@ -1,7 +1,9 @@
 
 export(metrics)
 export(define.direct.metric)
-export(list.direct.metrics)
+export(list.direct.metrics,
+       list.derived.metrics,
+       list.collection.derived.metrics)
 export(derived.metric, derived)
 export(collection.derived.metric, cderived)
 

@@ -2,7 +2,7 @@
 library(metlab) # source('sourcepkg.R')
 
 
-# Longitudinal study of the flexclust packages:
+### Longitudinal study of the flexclust packages:
 
 options(repos='http://cran.r-project.org')
 fcdir <- longitudinal.study('flexclust', './flexclust')
@@ -15,12 +15,7 @@ dir <- reinit.destdir('./flexclust')
 dir
 
 
-# Calculate all direct metrics metlab provides:
-
-list.direct.metrics()
-
-
-# Calculate all direct metrics metlab provides:
+### Calculate all direct metrics metlab provides:
 
 list.direct.metrics()
 
@@ -40,17 +35,16 @@ metlab:::list.derived.metrics()
 metlab:::list.collection.derived.metrics()
 
 
-# Number of authors (direct metric):
+### Number of authors (direct metric):
 
 met1$authors
 sapply(met, '[[', 'authors')
 
 
-# Overall lines of source code (direct metric):
+### Overall lines of source code (direct metric):
 
 sum(met1$r.files$lines)
 sapply(met, function(m) sum(m$r.files$lines))
-
 
 # ... plot:
 
@@ -80,7 +74,7 @@ qplot(version.num, value, group=variable, colour=variable,
                      labels=nlines$version.str)
 
 
-# Number of definitions (direct metric):
+### Number of definitions (direct metric):
 
 table(met1$r.files$type)
 sapply(met, function(m) table(m$r.files$type))
@@ -106,8 +100,8 @@ qplot(names, value, group=definitions, colour=definitions,
       ylab='Number of definitions')
 
 
-# Releas date versus version number (only for collection meaningful,
-# but not derived):
+### Releas date versus version number (only for collection meaningful,
+### but not derived):
 
 release.dates <- as.Date(sapply(met, function(m)
                                 attr(m, 'description')['date']))
@@ -118,7 +112,7 @@ qplot(release.dates, release.versions,
       geom=c('line', 'point'), xlab='Date', ylab='Version')
 
 
-# Source code lines to in-source documentation ratio (derived metric):
+### Source code lines to in-source documentation ratio (derived metric):
 
 derived('src.doc.lineratio', met1)
 sdl <- sapply(met, derived('src.doc.lineratio'))
@@ -127,7 +121,7 @@ qplot(versions, sdl, data=data.frame(versions, sdl),
       geom=c('line', 'point'))
 
 
-# Mean number of character per source code line (derived metric):
+### Mean number of character per source code line (derived metric):
 
 derived('characters.line.ratio', met1)
 
@@ -140,12 +134,16 @@ sapply(met, derived('characters.line.ratio'))
 # involved (see cross-sectional study example).
 
 
-# Programmers and documenters productivity (collection-derived metric):
+### Programmers and documenters productivity (collection-derived metric):
 
 pp <- cderived('programmer.productivity', met)
 dp <- cderived('documenter.productivity', met)
-i <- seq(along=pp)
 
-qplot(value, group=variable, colour=variable,
-      geom='line', data=melt(data.frame(id=seq(along=pp), pp, dp)), xlab='Version',
-      ylab='Number of definitions')
+prod <- data.frame(days=as.numeric(diff(release.dates)),
+                   programmer=pp,
+                   documenter=dp)
+
+qplot(days, value, group=variable, colour=variable,
+      geom='line', data=melt(prod, id.vars='days'),
+      xlab='Days', ylab='Productivity')
+
