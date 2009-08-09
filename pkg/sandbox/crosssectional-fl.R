@@ -17,4 +17,13 @@ dir
 
 ### Calculate all direct metrics metlab provides:
 
-met <- metrics(dir[3,3], list.direct.metrics())
+met <- metrics(dir[,3], list.direct.metrics())
+
+
+### Mean number of characters per souce code line:
+
+mchars <- sapply(met, derived('characters.line.ratio'))
+names(mchars) <- sapply(met, function(m) attr(m, 'description')['package'])
+
+mchars
+

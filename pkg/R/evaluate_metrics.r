@@ -162,6 +162,9 @@ eval_each_rfile <- function(path_file, name)
   components_vec <- NULL
   component_type_vec <- NULL
 
+  if (length(content)<1)
+    return(data.frame("component"=components_vec,"lines"=lines_vec,"blank lines"=blank_vec,"inter"=inter_comments_vec,"intra"=intra_comments_vec,"characters"=characters_vec,"type"=component_type_vec))
+
   # for each component
   for(i in 1:length(content))
   {
@@ -303,24 +306,23 @@ counting_component <- function(content,component_name,component_type)
    line_tmp <- gsub("[[:blank:]]","",line_of_code,extended=F)
    characters <- characters + nchar(line_tmp)
 
-   # substitute every symbol ' by a "
-   line_of_code <- gsub("\'","\"",line_of_code,extended=F)
-
-   # substitute every symbol \" by X since a \" will be always inside quotes in a correct expression
+   # substitute every symbol \\\" or \\\' by X
    line_of_code <- gsub("[\\][\"]","X",line_of_code,extended=F)
+   line_of_code <- gsub("[\\][\']","X",line_of_code,extended=F)
 
    # If there is a symbol # in the beggining (ignoring blank characters)
    if( regexpr("^[[:blank:]]\\{0,\\}[#]",line_of_code,extended=F)[1] != -1 )
    {
      inter_comments <- inter_comments+1
    }
-   # If not, then substitute every string (i.e "anything") by X
+   # If not, then substitute every string (i.e "anything" or 'anything') by X
    else
    {
-     while (regexpr("\"", line_of_code ,extended=F)[1] != -1)
-     {
-       line_of_code <- sub("[\"][^\"]\\{0,\\}[\"]","X",line_of_code,extended=F)
-     }
+     while (regexpr("[\"][^\"]\\{0,\\}[\"]", line_of_code ,extended=F)[1] != -1)
+     { line_of_code <- sub("[\"][^\"]\\{0,\\}[\"]","X",line_of_code,extended=F) }
+
+     while (regexpr("[\'][^\']\\{0,\\}[\']", line_of_code ,extended=F)[1] != -1)
+     { line_of_code <- sub("[\'][^\']\\{0,\\}[\']","X",line_of_code,extended=F) }
 
      # If still there is a # symbol, then it has a comment after some code
      if (regexpr("#", line_of_code ,extended=F)[1] != -1)
@@ -340,22 +342,22 @@ is_genericS3 <- function(content)
 {
   text <- deparse(content)
   isgenericS3 <- FALSE
-  
+
   for(i in 1:length(text))
   {
     line_of_code <- text[i]
 
-    # substitute every symbol ' by a "
-    line_of_code <- gsub("\'","\"",line_of_code,extended=F)
+   # substitute every symbol \\\" or \\\' by X
+   line_of_code <- gsub("[\\][\"]","X",line_of_code,extended=F)
+   line_of_code <- gsub("[\\][\']","X",line_of_code,extended=F)
 
-    # substitute every symbol \" by X since a \" will be always inside quotes in a correct expression
-    line_of_code <- gsub("[\\][\"]","X",line_of_code,extended=F)
+   while (regexpr("[\"][^\"]\\{0,\\}[\"]", line_of_code ,extended=F)[1] != -1)
+   { line_of_code <- sub("[\"][^\"]\\{0,\\}[\"]","X",line_of_code,extended=F) }
 
-    # substitute every string (i.e "anything") by X
-    while (regexpr("\"", line_of_code ,extended=F)[1] != -1)
-    {
-      line_of_code <- sub("[\"][^\"]\\{0,\\}[\"]","X",line_of_code,extended=F)
-    }
+   while (regexpr("[\'][^\']\\{0,\\}[\']", line_of_code ,extended=F)[1] != -1)
+   { line_of_code <- sub("[\'][^\']\\{0,\\}[\']","X",line_of_code,extended=F) }
+
+   line_of_code <- sub("[#].\\{0,\\}","X",line_of_code,extended=F)
 
     if (regexpr("UseMethod(", line_of_code ,extended=F)[1] != -1)
     {
