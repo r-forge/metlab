@@ -84,14 +84,14 @@ function(pkgpath) {
 
 define.internal.direct.metric('foreign.language.files',
 function(pkgpath) {
-  evaluate_ext_files(pkgpath, .Platform$file.sep)
+  evaluate_ext_files(pkgpath)
 })
 
 
 define.internal.direct.metric('vignettes',
 function(pkgpath) {
-  rnw <- length(evaluate_rnw_files(pkgpath, .Platform$file.sep))
-  pdf <- length(evaluate_pdf_files(pkgpath, .Platform$file.sep))
+  rnw <- length(evaluate_rnw_files(pkgpath))
+  pdf <- length(evaluate_pdf_files(pkgpath))
 
   c(rnw=rnw, pdf=pdf)
 })
@@ -99,7 +99,7 @@ function(pkgpath) {
 
 define.internal.direct.metric('data',
 function(pkgpath) {
-  length(evaluate_data_files(pkgpath, .Platform$file.sep))
+  length(evaluate_data_files(pkgpath))
 })
 
 
@@ -117,13 +117,13 @@ function(pkgpath) {
 define.internal.direct.metric('rd.files',
 function(pkgpath) {
   do.call(rbind,
-          evaluate_rd_files(pkgpath, .Platform$file.sep))
+          evaluate_rd_files(pkgpath))
 })
 
 
 define.internal.direct.metric('r.files',
 function(pkgpath) {
   do.call(rbind,
-          evaluate_rfiles(pkgpath, .Platform$file.sep))
+          evaluate_rfiles(pkgpath))
 })
 
