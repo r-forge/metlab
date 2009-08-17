@@ -16,11 +16,15 @@ metrics.pkg <- function(paths, direct.metrics) {
   names(metrics) <- sapply(direct.metrics, attr, 'name')
 
   descr <- read.dcf(file.path(paths, 'DESCRIPTION'))
-    
+
+  try (date <- unname(descr[,'Date']),TRUE)
+  if (is.character(date))
+    date <- NA
+
   structure(metrics, class='metrics',
             description=c(package=unname(descr[,'Package']),
               version=unname(descr[,'Version']),
-              date=unname(descr[,'Date']),
+              date=date,
               path=unname(paths)))
 }
 

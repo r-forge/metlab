@@ -46,7 +46,7 @@ function(metrics.collection) {
   
   date <- as.Date(sapply(metrics.collection, attr,
                          'description')['date',])
-  
+
   diff(lines) / as.numeric(diff(date))
 })
 

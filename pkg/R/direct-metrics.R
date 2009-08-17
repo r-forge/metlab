@@ -107,10 +107,13 @@ define.internal.direct.metric('citation',
 function(pkgpath) {
   citfile <- file.path(pkgpath, 'inst', 'CITATION')
   if ( file_test('-f', citfile) )
-    length(readCitationFile(citfile))
-  else
-    NULL
-  
+  {
+		result <- try(length(readCitationFile(citfile)),TRUE)
+    if (!is.character(result)){
+      result
+    }
+  }
+  NULL
 })
 
 

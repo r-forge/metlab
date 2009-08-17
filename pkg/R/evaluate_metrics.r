@@ -11,7 +11,11 @@ evaluate_ext_files <- function(path_pkg)
                          else
                            NA
                        })
-  table(extensions, useNA='always', dnn=NULL)
+
+  if (length(extensions)>0)
+    table(extensions, useNA='no', dnn=NULL)
+  else
+    0
 }
 
 evaluate_rnw_files <- function(path_pkg)
@@ -89,10 +93,6 @@ eval_each_rd <- function(path_file, name)
   rdfile <- readLines(path_file, n=-1)
   total <- length(rdfile)
 
-  #section <- c(section,"all")
-  #lines <- c(lines,sum(lines))
-  #characters <- c(characters,sum(characters))
-
   df <- data.frame(file=factor(rep(name, length(section))),
                    section=factor(section),lines,characters)
 
@@ -122,14 +122,12 @@ eval_each_rfile <- function(path_file, name)
   characters_vec <- components_vec <- component_type_vec <- NULL
 
   if (length(content)<1)
-      return(data.frame(file=factor(rep(name, length(components_vec))),
-                    component=factor(components_vec),
-                    type=factor(component_type_vec),
-                    lines=lines_vec,
-                    characters=characters_vec,
-                    lines.blank=blank_vec,
-                    comments.inter=inter_comments_vec,
-                    comments.intra=intra_comments_vec))
+      return(data.frame(file=factor(name),
+                    component=factor(NA),
+                    type=factor(NA),
+                    lines=0,characters=0,lines.blank=0,
+                    comments.inter=0,
+                    comments.intra=0))
                     
   # for each component
   for(i in 1:length(content))
@@ -160,8 +158,19 @@ eval_each_rfile <- function(path_file, name)
     {
       blanks_total <- blanks_total + 1
     }
-    characters_total <- characters_total + nchar(rfile[i])
+    
+    # count number of characters (excluding blank characters)
+    line_tmp <- gsub("[[:blank:]]","",rfile[i],extended=F)
+    characters_total <- characters_total + nchar(line_tmp)
   }
+  
+  inter_comments_vec <- c(inter_comments_vec, comments_total - sum(inter_comments_vec))
+  intra_comments_vec <- c(intra_comments_vec, 0 )
+  blank_vec <- c(blank_vec, blanks_total - sum(blank_vec) )
+  characters_vec <- c(characters_vec, characters_total - sum(characters_vec) )
+  lines_vec <- c(lines_vec, length(rfile) - sum(lines_vec) )
+  components_vec <- c(components_vec,"file")
+  component_type_vec <- c(component_type_vec,NA)
 
   return(data.frame(file=factor(rep(name, length(components_vec))),
                     component=factor(components_vec),
