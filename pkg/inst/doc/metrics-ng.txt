@@ -1,0 +1,15 @@
+
+Metrics idea:
+
+o calculate the difference (in characters) between Rd skeletons
+  (created with prompt*()) for each (exported) object and the
+  available documentation.
+
+
+o heuristic for the observance of a specific programming style
+  standard (like R Coding Standards by the R Core team or Google's R
+  Style Guide)
+
+
+
+
