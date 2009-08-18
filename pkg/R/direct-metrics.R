@@ -130,3 +130,8 @@ function(pkgpath) {
           evaluate_rfiles(pkgpath))
 })
 
+define.internal.direct.metric('halstead',
+function(pkgpath) {
+  do.call(rbind,
+          evaluate_halstead(pkgpath))
+})

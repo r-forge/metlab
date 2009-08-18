@@ -343,3 +343,258 @@ is_methodS3 <- function(name)
   else {return(FALSE)}
 }
 
+hal <- function(ct)
+{
+  content <- ct
+
+  ops <- NULL
+  opfc <- NULL
+
+  while(length(content)>0)
+  {
+    z <- as.list(content[[1]])
+
+    if( is.null(content[[1]]) || is.symbol(content[[1]]) || is.character(content[[1]]) || is.logical(content[[1]]) || is.numeric(content[[1]]) || is.name(content[[1]]) )
+    {
+      if ( is.null(content[[1]]) )
+      {
+        ops <- c(ops,"NULL")
+      }
+      else if (is.logical(content[[1]]) && is.na(content[[1]]))
+      {
+        ops <- c(ops,"NA")
+      }
+      else if (is.character(content[[1]]) )
+      {
+        ops <- c(ops,content[[1]])
+      }
+      else
+      {
+        arith <- c("+","-","*","^","%%","%/%","/")
+        compare <- c("==",">","<","!=","<=",">=")
+        logic <- c("&","|")
+        reserved_words <- c("if","else","repeat","while","function","for","in","next","break")
+        extra <- c("||","&&","<-",":",";","->","return","=")
+
+        operators_list <- c(arith,compare,logic,reserved_words,extra)
+
+        if (any(as.character(content[[1]]) == operators_list))
+        {
+          ops <- c(ops,as.character(content[[1]]))
+        }
+        else if (all(as.character(content[[1]]) != c('{','}','(',')','[',']','[[',']]')))
+        {
+          opfc <- c(opfc,as.character(content[[1]]))
+        }
+      }
+
+      content <- content[-1]
+    }
+    else if(is.list(z) && length(z) == 4 && as.character(z[[1]]) == "function" )
+    {
+        arguments <- attr(z[[2]],"names")
+        arguments <- arguments[arguments != ""]
+
+        langs <- NULL
+        defaults <- NULL
+        for (i in 1:length(z[[2]]))
+        {
+          if (is.language(z[[2]][[i]]))
+          {
+            if (is.null(z[[2]][[i]])==FALSE && as.character(z[[2]][[i]])[1]!="")
+              langs<- c(z[[2]][[i]],langs)
+          }
+          else
+          {
+            if(is.null(z[[2]][[i]])==FALSE)
+            {
+              if (as.character(z[[2]][[i]])!="")
+                defaults <- c(z[[2]][[i]],defaults)
+            }
+            else
+            {
+              defaults <- c("NULL",defaults)
+            }
+          }
+        }
+
+        arguments <- c(arguments,rep("=",times=(length(langs)+length(defaults))))
+
+        content <- content[-1]
+        content <- c(langs,arguments,defaults,z[[1]],z[[3]],content)
+
+    }
+    else if ((as.character(z[[1]]) == "if") && length(z)>3)
+    {
+        content <- content[-1]
+        content <- c(z[[1]],z[[2]],z[[3]],"else",z[[4]],content)
+    }
+    else if ((as.character(z[[1]]) == "for") && length(z)>3)
+    {
+        content <- content[-1]
+        content <- c(z[[1]],z[[2]],"in",z[[3]],z[[4]],content)
+    }
+    else
+    {
+        arguments <- attr(z,"names")
+        arguments <- arguments[arguments != ""]
+        arguments <- c(arguments,rep("=",times=length(arguments)))
+
+        content <- content[-1]
+        content <- c(z,arguments,content)
+
+    }
+
+  } # close while
+
+
+  # This part of the code detects which strings are functions calling and therefore operators
+
+  content <- deparse(ct)
+
+  # substitute every symbol \\\" or \\\' by X
+  # goal: remove every string from the code (comments had been already removed)
+  for (i in 1:length(content))
+  {
+    content[i] <- gsub("[\\][\"]","",content[i],extended=F)
+    content[i] <- gsub("[\\][\']","",content[i],extended=F)
+
+    while (regexpr("[\"][^\"]\\{0,\\}[\"]", content[i] ,extended=F)[1] != -1)
+    { content[i] <- sub("[\"][^\"]\\{0,\\}[\"]","",content[i],extended=F) }
+
+    while (regexpr("[\'][^\']\\{0,\\}[\']", content[i] ,extended=F)[1] != -1)
+    { content[i] <- sub("[\'][^\']\\{0,\\}[\']","",content[i],extended=F) }
+  }
+
+  opfctrue <- NULL
+
+  for (j in 1:length(opfc))
+  {
+    for (i in 1:length(content))
+    {
+      expr <- paste(opfc[j],"[[:blank:]]\\{0,\\}[(]",sep="")
+      if (regexpr(expr, content[i] ,extended=F)[1] != -1)
+      {
+        content[i] <- sub(expr,"",content[i],extended=F)
+        opfctrue <- c(opfctrue,opfc[j])
+        opfc <- opfc[-j]
+      }
+    }
+   }
+
+  # opfctrue: some operators
+  # c(ops,opfc): operators and operands
+
+  return(list("mix"=c(ops,opfc),"operators"=opfctrue))
+}
+
+get_operators <- function(ops,fcops)
+{
+  opfctrue <- fcops
+
+  # operators
+  arith <- c("+","-","*","^","%%","%/%","/")
+  compare <- c("==",">","<","!=","<=",">=")
+  logic <- c("&","|")
+  reserved_words <- c("if","else","repeat","while","function","for","in","next","break")
+  extra <- c("||","&&","<-",":",";","->","return","=")
+
+  # other things are operands, including function callings and function declarations
+  quantity_vec <- NULL
+  operators_vec <- NULL
+
+  operators_list <- c(arith,compare,logic,reserved_words,extra)
+
+  for(i in 1:length(operators_list))
+  {
+    logicvec <- operators_list[i] == ops
+    if (any(logicvec))
+    {
+      quantity <- logicvec[logicvec==TRUE]
+      quantity_vec <- c(quantity_vec,length(quantity))
+      operators_vec <- c(operators_vec,operators_list[i])
+      ops <- ops[ops != operators_list[i]]
+    }
+  }
+
+  while (length(opfctrue)>0)
+  {
+    logicvec <- opfctrue[1] == opfctrue
+    quantity <- logicvec[logicvec==TRUE]
+    quantity_vec <- c(quantity_vec,length(quantity))
+    operators_vec <- c(operators_vec,opfctrue[1])
+    opfctrue <- opfctrue[logicvec==FALSE]
+  }
+
+  list("quantity_vec"=quantity_vec,"operators_vec"=operators_vec,"operands"=ops)
+}
+
+get_operands <- function(operands)
+{
+  ops <- operands
+  quantity_vec <- NULL
+  operands_vec <- NULL
+
+  while(length(ops)>0)
+  {
+    logicvec <- ops == ops[1]
+    quantity <- logicvec[logicvec==TRUE]
+    quantity_vec <- c(quantity_vec,length(quantity))
+    operands_vec <- c(operands_vec,ops[1])
+    ops <- ops[ops != ops[1]]
+
+  }
+
+  list("quantity_vec"=quantity_vec,"operands_vec"=operands_vec)
+}
+
+
+halstead <- function(rfile)
+{
+  content <- rfile
+  ops <- hal(content)
+
+  values <- get_operators(ops$mix,ops$operators)
+
+  #  N1 = total number of operators
+  N1 <- sum(values$quantity_vec)
+  # n1 = number of distinct operators
+  n1 <- length(values$operators_vec)
+
+  val <- get_operands(values$operands)
+
+  #  N2 = total number of operands
+  N2 <- sum(val$quantity_vec)
+  # n2 = number of distinct operands
+  n2 <- length(val$operands_vec)
+
+  n <- n1 + n2 # vocabulary
+  H <- n1*log(n1) + n2*log(n2) # length
+  N <- N1 + N2 # real Length
+  V <- N*log(n) # volume
+  D <- (n1*N2)/(2*n2) # level of difficulty
+  E <- V*D # Effort
+  T <- E/18 # time of implementation in seconds
+  B <- V/3000 # Estimated number of bugs
+
+  list("operators"=values$operators_vec,"operators.quantities"=values$quantity_vec,
+       "operands"=val$operands_vec,"operands.quantities"=val$quantity_vec,
+       "N1"=N1,"n1"=n1,"N2"=N2,"n2"=n2,"n"=n,"H"=H,"N"=N,"V"=V,"D"=D,"E"=E,"T"=T,"B"=B)
+  
+  #data.frame("N1"=N1,"n1"=n1,"N2"=N2,"n2"=n2,"n"=n,"H"=H,"V"=V,"D"=D,"E"=E,"T"=T,"B"=B)
+}
+
+evaluate_halstead <- function(pkgpath)
+{
+  way <- file.path(pkgpath,'R')
+  rfiles <- list.files(way,pattern="[.]R$", ignore.case=TRUE)
+
+  info <- vector("list",length(rfiles))
+
+  for(i in 1:length(rfiles))
+  {
+    info[[i]] <- halstead(parse(file.path(way,rfiles[i])))
+  }
+
+  return(info)
+}
