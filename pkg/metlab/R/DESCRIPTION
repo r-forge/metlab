@@ -1,0 +1,10 @@
+Package: metlab
+Version: 0.1
+License: GPL (>= 2)
+Description: A package to calculate metrics of packages.
+Title: The Metrics Laboratory
+Author: Manuel J. A. Eugster <Manuel.Eugster@stat.uni-muenchen.de>,
+	based on code from Mariane Machado <mariane.machado@gmail.com>
+Maintainer: Manuel J. A. Eugster <Manuel.Eugster@stat.uni-muenchen.de>
+Depends: R 
+
